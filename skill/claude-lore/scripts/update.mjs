@@ -23,7 +23,7 @@ export const SOURCES = [
     id: 'claude-code',
     title: 'Claude Code changelog',
     url: 'https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md',
-    cite: 'https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md',
+    cite: 'https://code.claude.com/docs/en/changelog', // the docs copy, which the skill may fetch without a prompt
     maxBytes: 60_000, // newest first, so the top of the file is enough
     range: true,
     parse: parseChangelog,
