@@ -7,7 +7,7 @@
       "name": "lore-lookup",
       "source": "./",
       "description": "Answers questions about Claude, Claude Code and the Claude apps from Anthropic's official sources, with citations. Installs no hooks; an optional daily SessionStart hook is available only when the skill is installed manually in Claude Code.",
-      "version": "1.0.3"
+      "version": "1.0.4"
     }
   ]
 }

@@ -43,7 +43,7 @@ In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs i
 
 ## What it does
 
-**The skill (`lore-lookup`).** Claude loads it whenever you ask how Claude, Claude Code or the Claude apps work: what a setting, command, hook, plan, usage limit or feature does, whether Claude can do something, or what's new. When it's loaded, Claude:
+**The skill (`lore-lookup`).** Claude loads it when you ask how Claude, Claude Code or the Claude apps work: what a setting, command, hook, plan, usage limit or feature does, whether a Claude product has a feature, or what's new. When it's loaded, Claude:
 
 1. checks whether today's summary of release notes is cached, and reads it for "what's new" questions;
 2. fetches only the official pages the question needs, from the Claude Code docs, the Claude Help Center, the Claude Platform docs and the release notes;
