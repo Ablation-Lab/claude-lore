@@ -3,7 +3,7 @@
 //
 // At most once a day it downloads the newest entries from Anthropic's public
 // release notes and writes a short summary to
-// ~/.claude/claude-lore-data/cache/summary.md for the claude-lore skill to
+// ~/.claude/claude-lore-data/cache/summary.md for the lore-lookup skill to
 // read. It prints nothing (so it adds nothing to the session's context),
 // always exits 0, and stops itself after 15 seconds. The work is done in
 // ../scripts/update.mjs.
