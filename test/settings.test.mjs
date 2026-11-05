@@ -12,10 +12,10 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-lore-test-'));
 process.env.CLAUDE_CONFIG_DIR = tmp;
 
-const common = await import('../skill/claude-lore/scripts/common.mjs');
-const lore = await import('../skill/claude-lore/scripts/lore.mjs');
+const common = await import('../skills/lore-lookup/scripts/common.mjs');
+const lore = await import('../skills/lore-lookup/scripts/lore.mjs');
 const settingsFile = path.join(tmp, 'settings.json');
-const skillDir = path.join(tmp, 'skills', 'claude-lore');
+const skillDir = path.join(tmp, 'skills', 'lore-lookup');
 
 const OTHER_HOOK = { matcher: 'startup', hooks: [{ type: 'command', command: 'echo sample-other-hook' }] };
 const ORIGINAL = { model: 'sample-model', hooks: { SessionStart: [OTHER_HOOK], Stop: [OTHER_HOOK] } };
@@ -40,7 +40,7 @@ test('hook-on adds one async startup hook in exec form and keeps everything else
   assert.equal(ours.matcher, 'startup');
   assert.equal(ours.hooks[0].command, 'node');
   assert.equal(ours.hooks[0].async, true);
-  assert.match(ours.hooks[0].args[0], /claude-lore\/hook\/daily-update\.mjs$/);
+  assert.match(ours.hooks[0].args[0], /lore-lookup\/hook\/daily-update\.mjs$/);
   assert.doesNotMatch(ours.hooks[0].args[0], /\\/);
   assert.equal(backups().length, 1);
 });
@@ -192,7 +192,7 @@ test('installer: install with hook, update prunes old files, uninstall removes o
 });
 
 test('installer refuses to install over a clone of the repo inside the skills folder', () => {
-  const fakeClone = path.join(tmp, 'skills', 'claude-lore');
+  const fakeClone = path.join(tmp, 'skills', 'lore-lookup');
   fs.mkdirSync(fakeClone, { recursive: true });
   fs.cpSync(repo, fakeClone, { recursive: true, filter: (s) => !/[\\/](\.git|node_modules)([\\/]|$)/.test(s) });
   fs.writeFileSync(path.join(fakeClone, 'precious.txt'), 'x');
@@ -254,4 +254,72 @@ test('uninstall never deletes through a linked cache folder', (t) => {
   const r = install('--uninstall');
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(fs.readdirSync(outside).sort(), ['notes.tmp', 'state.json']);
+});
+
+test('the new name is recognised, and look-alike folders are not', () => {
+  assert.ok(common.isOurs({ command: 'node', args: ['/x/skills/lore-lookup/hook/daily-update.mjs'] }));
+  assert.ok(!common.isOurs({ command: 'node', args: ['/x/skills/my-lore-lookup/hook/daily-update.mjs'] }));
+});
+
+test('an install from before the rename (claude-lore) is moved over, hook included', () => {
+  const legacy = path.join(tmp, 'skills', 'claude-lore');
+  fs.mkdirSync(path.join(legacy, 'hook'), { recursive: true });
+  fs.writeFileSync(path.join(legacy, 'SKILL.md'), 'old');
+  fs.writeFileSync(path.join(legacy, 'hook', 'daily-update.mjs'), 'old');
+  fs.writeFileSync(path.join(legacy, '.install-manifest.json'), JSON.stringify({ files: ['SKILL.md', 'hook/daily-update.mjs'] }));
+  const oldEntry = { matcher: 'startup', hooks: [{ type: 'command', command: 'node', args: [path.join(legacy, 'hook', 'daily-update.mjs').split(path.sep).join('/')], async: true, timeout: 30 }] };
+  fs.writeFileSync(settingsFile, JSON.stringify({ model: 'sample-model', hooks: { SessionStart: [OTHER_HOOK, oldEntry] } }, null, 2));
+  const r = install();
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /Moved the daily hook/);
+  assert.ok(!fs.existsSync(legacy), 'old copy removed');
+  const s = read();
+  assert.equal(s.hooks.SessionStart.length, 2);
+  assert.deepEqual(s.hooks.SessionStart[0], OTHER_HOOK);
+  assert.match(s.hooks.SessionStart[1].hooks[0].args[0], /\/skills\/lore-lookup\/hook\/daily-update\.mjs$/);
+  assert.ok(fs.existsSync(s.hooks.SessionStart[1].hooks[0].args[0]));
+});
+
+function makeLegacyInstall() {
+  const legacy = path.join(tmp, 'skills', 'claude-lore');
+  fs.mkdirSync(path.join(legacy, 'hook'), { recursive: true });
+  fs.writeFileSync(path.join(legacy, 'SKILL.md'), 'old');
+  fs.writeFileSync(path.join(legacy, 'hook', 'daily-update.mjs'), 'old');
+  fs.writeFileSync(path.join(legacy, '.install-manifest.json'), JSON.stringify({ files: ['SKILL.md', 'hook/daily-update.mjs'] }));
+  const args = [path.join(legacy, 'hook', 'daily-update.mjs').split(path.sep).join('/')];
+  return { legacy, entry: { matcher: 'startup', hooks: [{ type: 'command', command: 'node', args, async: true, timeout: 30 }] } };
+}
+
+test('old copy is kept when settings.json cannot be read', () => {
+  const { legacy } = makeLegacyInstall();
+  fs.writeFileSync(settingsFile, '{ "hooks": { "SessionStart": [] }, }');
+  const r = install();
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /Kept the old "claude-lore" copy/);
+  assert.ok(fs.existsSync(path.join(legacy, 'hook', 'daily-update.mjs')));
+});
+
+test('--hook never removes the old copy if the hook cannot be moved', (t) => {
+  const { legacy, entry } = makeLegacyInstall();
+  fs.writeFileSync(settingsFile, JSON.stringify({ hooks: { SessionStart: [entry] } }, null, 2));
+  fs.chmodSync(settingsFile, 0o444);
+  try {
+    const r = install('--hook');
+    if (r.status === 0) { t.skip('this system lets read-only files be replaced'); return; }
+    assert.ok(fs.existsSync(path.join(legacy, 'hook', 'daily-update.mjs')), 'old copy must survive');
+    assert.match(read().hooks.SessionStart[0].hooks[0].args[0], /claude-lore\/hook/);
+  } finally {
+    fs.chmodSync(settingsFile, 0o644);
+  }
+});
+
+test('--hook with an old install moves the hook and removes the old copy', () => {
+  const { legacy, entry } = makeLegacyInstall();
+  fs.writeFileSync(settingsFile, JSON.stringify({ hooks: { SessionStart: [entry] } }, null, 2));
+  const r = install('--hook');
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(!fs.existsSync(legacy));
+  const s = read();
+  assert.equal(s.hooks.SessionStart.length, 1);
+  assert.match(s.hooks.SessionStart[0].hooks[0].args[0], /\/lore-lookup\/hook\//);
 });

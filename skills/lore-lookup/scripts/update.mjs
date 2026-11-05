@@ -1,7 +1,7 @@
 // Claude Lore daily update: the logic behind hook/daily-update.mjs.
 //
 // At most once a day, download the newest entries from Anthropic's public
-// release notes and write a short summary for the claude-lore skill to read.
+// release notes and write a short summary for the lore-lookup skill to read.
 
 import fs from 'node:fs';
 import path from 'node:path';

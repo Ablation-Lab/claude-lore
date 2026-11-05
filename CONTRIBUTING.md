@@ -4,7 +4,7 @@ Thanks for helping. A few rules keep Claude Lore small and trustworthy.
 
 ## Keep SKILL.md and README.md in sync
 
-`skill/claude-lore/SKILL.md` is what Claude follows. `README.md` is what people read. They must describe the same behaviour.
+`skills/lore-lookup/SKILL.md` is what Claude follows. `README.md` is what people read. They must describe the same behaviour.
 
 Whenever you change one of them, or code that changes what the skill or hook does, check the other still matches. In particular check:
 
@@ -15,7 +15,7 @@ Whenever you change one of them, or code that changes what the skill or hook doe
 - the commands for installing, turning the hook on and off, and uninstalling;
 - the table of files it changes on your computer.
 
-If the hook's behaviour changes, also update `test/` and the comment at the top of `skill/claude-lore/hook/daily-update.mjs`.
+If the hook's behaviour changes, also update `test/` and the comment at the top of `skills/lore-lookup/hook/daily-update.mjs`.
 
 ## Other rules
 

@@ -26,10 +26,10 @@ if (major < 18) {
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const source = path.join(here, 'skill', 'claude-lore');
+const source = path.join(here, 'skills', 'lore-lookup');
 const { paths, readJson, loadSettings, hasOurHook, offerMadeAt, markOfferMade, listBackups } =
-  await import('./skill/claude-lore/scripts/common.mjs');
-const lore = await import('./skill/claude-lore/scripts/lore.mjs');
+  await import('./skills/lore-lookup/scripts/common.mjs');
+const lore = await import('./skills/lore-lookup/scripts/lore.mjs');
 
 const OPTIONS = ['--hook', '--no-hook', '--hook-off', '--uninstall'];
 const args = process.argv.slice(2);
@@ -121,18 +121,21 @@ function install() {
   fs.writeFileSync(p.manifest, JSON.stringify({ files }, null, 2) + '\n');
 }
 
-function uninstallSkill() {
-  if (!fs.existsSync(p.skillDir)) return 'The skill was not installed.';
-  const files = readJson(p.manifest, {}).files;
+// Remove an installed copy of the skill (the current one, or the old
+// "claude-lore" one), using that folder's own install manifest.
+function uninstallSkill(dir = p.skillDir) {
+  if (!fs.existsSync(dir)) return 'The skill was not installed.';
+  if (isLink(dir)) return `Left ${dir} alone because it is a link.`;
+  const files = readJson(path.join(dir, '.install-manifest.json'), {}).files;
   if (!Array.isArray(files)) {
-    return `Left ${p.skillDir} alone: it has no install manifest, so it wasn't installed by this installer. Delete it by hand if you're sure.`;
+    return `Left ${dir} alone: it has no install manifest, so it wasn't installed by this installer. Delete it by hand if you're sure.`;
   }
-  for (const rel of files) if (typeof rel === 'string' && !rel.includes('..')) removeOwnFile(p.skillDir, rel);
-  removeOwnFile(p.skillDir, '.install-manifest.json');
-  removeEmptyDirs(p.skillDir);
-  return fs.existsSync(p.skillDir)
-    ? `Removed the skill's files. ${p.skillDir} still holds files Claude Lore didn't install, so it was kept.`
-    : `Removed the skill: ${p.skillDir}`;
+  for (const rel of files) if (typeof rel === 'string' && !rel.includes('..')) removeOwnFile(dir, rel);
+  removeOwnFile(dir, '.install-manifest.json');
+  removeEmptyDirs(dir);
+  return fs.existsSync(dir)
+    ? `Removed the skill's files. ${dir} still holds files Claude Lore didn't install, so it was kept.`
+    : `Removed the skill: ${dir}`;
 }
 
 function uninstallData() {
@@ -169,7 +172,9 @@ function hookIsOn() {
 try {
   if (opt === '--uninstall') {
     console.log(lore.hookOff()); // stops here (with nothing removed) if settings.json can't be read
-    console.log(uninstallSkill());
+    const hadLegacy = fs.existsSync(p.legacySkillDir);
+    if (fs.existsSync(p.skillDir) || !hadLegacy) console.log(uninstallSkill());
+    if (hadLegacy) console.log(`Old "claude-lore" copy: ${uninstallSkill(p.legacySkillDir)}`);
     console.log(uninstallData());
     const backups = listBackups();
     if (backups.length) {
@@ -185,7 +190,27 @@ try {
   }
 
   install();
-  console.log(`Installed the claude-lore skill in ${p.skillDir}`);
+  console.log(`Installed the lore-lookup skill in ${p.skillDir}`);
+
+  // Move over an install from before the rename (skill "claude-lore"). The
+  // hook is re-pointed first, and the old copy is removed only once we know no
+  // hook entry still needs it, so a hook is never left pointing at a missing
+  // script. If settings.json can't be read, the old copy is kept.
+  if (fs.existsSync(p.legacySkillDir)) {
+    let settingsOk = true;
+    try { loadSettings(); } catch { settingsOk = false; }
+    if (!settingsOk) {
+      console.log(`Kept the old "claude-lore" copy in ${p.legacySkillDir}, because ${p.settings} can't be read, so Claude Lore can't tell whether a hook still uses it. Fix settings.json, then run the installer again.`);
+    } else {
+      if (hookIsOn()) {
+        const msg = lore.hookOn(); // throws (and stops here, removing nothing) if settings.json can't be saved
+        if (!/already on/.test(msg)) console.log(`Moved the daily hook to the new location. ${msg}`);
+      }
+      console.log(`Old "claude-lore" copy: ${uninstallSkill(p.legacySkillDir)}`);
+    }
+  } else if (opt !== '--hook' && hookIsOn()) {
+    lore.hookOn(); // keep an existing hook up to date (no change if it already is)
+  }
 
   if (opt === '--hook') {
     console.log(lore.hookOn());

@@ -12,8 +12,8 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-lore-test-'));
 process.env.CLAUDE_CONFIG_DIR = tmp;
 
-const mod = await import('../skill/claude-lore/scripts/update.mjs');
-const { paths, localDate } = await import('../skill/claude-lore/scripts/common.mjs');
+const mod = await import('../skills/lore-lookup/scripts/update.mjs');
+const { paths, localDate } = await import('../skills/lore-lookup/scripts/common.mjs');
 
 const CHANGELOG = `# Changelog
 
@@ -219,7 +219,7 @@ test('the hook entry script runs, prints nothing and exits 0 (today\'s cache: no
   fs.mkdirSync(paths().cacheDir, { recursive: true });
   fs.writeFileSync(paths().summary, 'x');
   fs.writeFileSync(paths().state, JSON.stringify({ cacheDate: localDate() }));
-  const r = spawnSync(process.execPath, [path.join(repo, 'skill/claude-lore/hook/daily-update.mjs')], {
+  const r = spawnSync(process.execPath, [path.join(repo, 'skills/lore-lookup/hook/daily-update.mjs')], {
     env: { ...process.env, CLAUDE_CONFIG_DIR: tmp }, input: '{"hook_event_name":"SessionStart"}', encoding: 'utf8',
   });
   assert.equal(r.status, 0);

@@ -12,8 +12,12 @@ export function claudeDir() {
   return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 }
 
-export const SKILL_NAME = 'claude-lore';
-export const DATA_NAME = 'claude-lore-data'; // not "claude-lore", so it can't be mistaken for a clone of the repo
+// The skill is called lore-lookup: skill names uploaded to claude.ai or the
+// API can't contain "claude". Before 2026-11-05 it was installed as
+// "claude-lore"; the installer moves that over (see LEGACY_SKILL_NAME).
+export const SKILL_NAME = 'lore-lookup';
+export const LEGACY_SKILL_NAME = 'claude-lore';
+export const DATA_NAME = 'claude-lore-data'; // the project's data folder; not a skill or repo name
 
 export function paths() {
   const base = claudeDir();
@@ -23,6 +27,7 @@ export function paths() {
     claudeDir: base,
     settings: path.join(base, 'settings.json'),
     skillDir,
+    legacySkillDir: path.join(base, 'skills', LEGACY_SKILL_NAME),
     manifest: path.join(skillDir, '.install-manifest.json'),
     hookScript: path.join(skillDir, 'hook', 'daily-update.mjs'),
     dataDir: data,
@@ -34,8 +39,10 @@ export function paths() {
   };
 }
 
-// Our hook entry is recognised by its script path ending in this.
-export const HOOK_MARKER = 'claude-lore/hook/daily-update.mjs';
+// Our hook entry is recognised by its script path ending in one of these (the
+// second is the old install location, so turning the hook on moves it over).
+export const HOOK_MARKER = `${SKILL_NAME}/hook/daily-update.mjs`;
+const HOOK_MARKERS = [HOOK_MARKER, `${LEGACY_SKILL_NAME}/hook/daily-update.mjs`];
 
 // Local calendar date as YYYY-MM-DD ("today" means the user's today).
 export function localDate(d = new Date()) {
@@ -110,8 +117,8 @@ export function hookHandler(scriptPath = paths().hookScript) {
 }
 
 const norm = (s) => String(s).replace(/\\/g, '/').replace(/^['"]+|['"]+$/g, '').trim();
-// The marker must be the whole path or follow a "/", so "my-claude-lore/…" isn't ours.
-const endsWithMarker = (s) => s === HOOK_MARKER || s.endsWith(`/${HOOK_MARKER}`);
+// The marker must be the whole path or follow a "/", so "my-lore-lookup/…" isn't ours.
+const endsWithMarker = (s) => HOOK_MARKERS.some((m) => s === m || s.endsWith(`/${m}`));
 
 // A hook handler is ours if its script path (in args, or at the end of the
 // command for older shell-form entries) ends in our marker.
