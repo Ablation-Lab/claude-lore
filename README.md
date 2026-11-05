@@ -1,6 +1,8 @@
-# Claude Lore
+# Lore Lookup
 
-Claude doesn't reliably know how its own apps work. Settings, plans and features change faster than the model is trained, so it can give out-of-date or made-up answers about itself. Claude Lore fixes that with a skill called `lore-lookup`. Ask Claude anything about Claude or Claude Code, and `lore-lookup` checks Anthropic's official docs and help pages for the answer. In Claude Code you can also turn on an optional hook that quietly fetches the latest release notes once a day, at the start of a session.
+Part of the Claude Lore project from Ablation Lab.
+
+Claude doesn't reliably know how its own apps work. Settings, plans and features change faster than the model is trained, so it can give out-of-date or made-up answers about itself. Lore Lookup fixes that with a skill called `lore-lookup`. Ask Claude anything about Claude or Claude Code, and `lore-lookup` checks Anthropic's official docs and help pages for the answer. In Claude Code you can also turn on an optional hook that quietly fetches the latest release notes once a day, at the start of a session.
 
 The project and this repo are called Claude Lore, but the skill and the plugin are called `lore-lookup`. The skill was first called `claude-lore` and was renamed because skill names can't contain "claude".
 
@@ -9,8 +11,8 @@ The project and this repo are called Claude Lore, but the skill and the plugin a
 ## Where it works
 
 - **Claude Code:** yes. Install `lore-lookup` as a plugin, with the installer, or by copying its folder (see [Install](#install)). The optional daily hook works only here, and only when the skill is installed manually in Claude Code (with the installer, or by copying its folder to `~/.claude/skills/lore-lookup`), not with the plugin.
-- **Text chats in the Claude app:** yes, once you upload the skill (see [Use it in the Claude app](#use-it-in-the-claude-app)). It needs a plan with custom skills, code execution, and web search turned on.
-- **Claude voice mode:** no. Voice mode doesn't load skills.
+- **claude.ai chat and Cowork:** the skill loads when you add the plugin from the directory (**Customize > Plugins**) or upload the skill yourself (see [Use it in the Claude app](#use-it-in-the-claude-app)). There, Claude answers using that app's own web search and fetch, so turn web search on. The local helper and the daily hook are Claude Code features, so they're skipped.
+- **A plugin added in claude.ai also appears in Claude Code** as a synced plugin at the next session start. It works there like the plugin installed in Claude Code: the skill and its helper, but no daily hook.
 
 ## What this plugin runs, sends and fetches
 
@@ -18,8 +20,8 @@ In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs i
 
 **The `lore-lookup` skill**, when Claude loads it for a question:
 
-- In Claude Code, it runs its local helper, `node <skill folder>/scripts/lore.mjs` with `status`, `summary` or `offer-made`. These read the cached summary and record whether the hook has been offered (`~/.claude/claude-lore-data/offer.json`). They make no network requests.
-- Claude reads pages with its own web fetch tool from Anthropic's sites (`code.claude.com`, `support.claude.com`, `platform.claude.com`, `docs.claude.com`, `claude.com` and `www.anthropic.com`), and may run web searches. A search query can include words from your question. Nothing else is sent anywhere, and Claude Lore has no server of its own.
+- In Claude Code, it runs its local helper, `node <skill folder>/scripts/lore.mjs` with `status`, `summary` or `offer-made`. These read the cached summary and record whether the hook has been offered (`~/.claude/claude-lore-data/offer.json`). `status` also reads `~/.claude/settings.json` to see whether the hook entry is there; it's read only, and never printed or sent. They make no network requests.
+- Claude reads pages with its own web fetch tool from Anthropic's sites (`code.claude.com`, `support.claude.com`, `platform.claude.com`, `docs.claude.com`, `claude.com` and `www.anthropic.com`), and may run web searches. A search query can include words from your question. Nothing else is sent anywhere, and Claude Lore has no server of its own. See also [Privacy](#privacy).
 
 **The optional daily hook** (Claude Code only, off unless you turn it on):
 
@@ -54,11 +56,11 @@ The skill pre-approves only reading Anthropic's own sites (`code.claude.com`, `s
 
 **The optional daily hook** (Claude Code only). At most once a day, when a new session starts, it fetches the newest entries from the [Claude Code changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md), the [Claude apps release notes](https://support.claude.com/en/articles/12138966-release-notes) and the [Claude Platform release notes](https://platform.claude.com/docs/en/release-notes/overview), and saves a short summary for the skill. It runs in the background, so it never delays startup, and it adds nothing to your sessions' context or usage: the skill reads the summary only when you ask about Claude. [What this plugin runs, sends and fetches](#what-this-plugin-runs-sends-and-fetches) has the details.
 
-The summary is a plain extract of the release notes, not AI-written. Angle brackets and invisible characters in it are replaced or removed, so that nothing in a fetched page can pose as an instruction to Claude.
+The summary is a plain extract of the release notes, not AI-written. Angle brackets and invisible characters in it are replaced or removed, so text in a fetched page can't pass for a system tag. The skill also tells Claude to treat the summary and every fetched page as reference data and never to follow instructions in them.
 
 ## Example prompts
 
-Just ask in any Claude Code session (or type `/lore-lookup` and your question):
+Just ask in any Claude Code session. To call the skill directly, type `/lore-lookup:lore-lookup` and your question if you installed the plugin, or `/lore-lookup` if you used the installer or copied the folder.
 
 - "How do SessionStart hooks work in Claude Code?"
 - "What's new in Claude Code this week?"
@@ -127,7 +129,7 @@ Early versions installed the skill as `~/.claude/skills/claude-lore`. Running `n
 
 ## Use it in the Claude app
 
-You can also upload the skill to claude.ai and use it in text chats in the Claude app, where it answers the same way using the app's web search. It isn't used in voice mode. The status helper and the daily hook are Claude Code features, so they're skipped there. You need a plan that supports custom skills, with code execution turned on.
+You can also upload the skill to claude.ai, or add the plugin from the directory, and use it in claude.ai chat and Cowork, where it answers the same way using the app's web search. The status helper and the daily hook are Claude Code features, so they're skipped there. You need a plan that supports custom skills, with code execution turned on.
 
 1. Make a ZIP file whose root contains the `lore-lookup` folder (not its files on their own):
 
@@ -196,7 +198,8 @@ Claude Code starts `node` directly with the script path, without a shell, so thi
 | Path | What | When |
 |---|---|---|
 | `~/.claude/skills/lore-lookup/` | The skill, the hook script, the helper, and `.install-manifest.json` (the list of files it installed) | Install |
-| `~/.claude/claude-lore-data/` | `state.json` (cache date, last failure), `offer.json` (when the hook was offered) and `cache/summary.md` | When the skill or hook first runs |
+| `~/.claude/claude-lore-data/` | `state.json` (cache date, last failure) and `cache/summary.md` | When the hook runs |
+| `~/.claude/claude-lore-data/offer.json` | When the hook was offered or turned on | Only when the skill offers the hook, or you turn it on |
 | `~/.claude/settings.json` | One SessionStart hook entry | Only if you turn the hook on |
 | `~/.claude/settings.json.claude-lore-backup-…` | Copies of `settings.json` from before each edit (newest three kept) | Each time the hook is turned on or off |
 
@@ -228,6 +231,20 @@ test/                           automated tests (node --test)
 ```
 
 Everything is plain JavaScript run by Node, with no packages to install. Run the tests with `node --test`.
+
+## Privacy
+
+Lore Lookup collects nothing. It has no server, no telemetry and no account.
+
+- **Read:** the cached summary, `offer.json` and `state.json` in `~/.claude/claude-lore-data/`, and `~/.claude/settings.json`, read only, to see whether the hook entry is there. `settings.json` is never printed or sent. The cached summary is shown to Claude when it answers a question, and `status` shows only dates, whether the hook is on and which sources failed.
+- **Written:** data files only in `~/.claude/claude-lore-data/`. If you use the installer, it also copies the skill to `~/.claude/skills/lore-lookup/`. Only if you turn the daily hook on, it adds one entry to `~/.claude/settings.json` and keeps backups next to it (`settings.json.claude-lore-backup-…`, newest three).
+- **Sent:** Claude's own web fetch and web search reach Anthropic's pages, and a search query can include words from your question. If the daily hook is on, it fetches its three pages at most once a day after a successful fetch (while all three fail, it tries again at most once an hour), following up to three redirects within the same hosts. The requests carry a user agent and, for the two Markdown pages, a `Range` header, and nothing else. [What this plugin runs, sends and fetches](#what-this-plugin-runs-sends-and-fetches) has the details.
+
+Everything it stores stays on your computer until you delete it; `node install.mjs --uninstall` removes it.
+
+## Support
+
+Questions, problems and security reports: [GitHub issues](https://github.com/Ablation-Lab/claude-lore/issues).
 
 ## Contributing
 

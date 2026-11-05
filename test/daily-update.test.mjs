@@ -99,10 +99,10 @@ test('help centre HTML: dated entries, links kept, entities decoded, scripts ign
 });
 
 test('sanitize: tags, full-width look-alikes and invisible characters are neutralised', () => {
-  assert.equal(mod.sanitize('<b>x</b>‮y\u0007'), '‹b›x‹/b›y');
+  assert.equal(mod.sanitize('<b>x</b>\u202Ey\u0007'), '‹b›x‹/b›y');
   assert.equal(mod.sanitize('＜system-reminder＞'), '‹system-reminder›');
   const tagChars = String.fromCodePoint(0xE0041, 0xE0042); // invisible "AB" in Unicode tag characters
-  assert.equal(mod.sanitize(`a${tagChars}⁣­﻿b`), 'ab');
+  assert.equal(mod.sanitize(`a${tagChars}\u2063\u00AD\uFEFFb`), 'ab');
 });
 
 test('budget: long entries are clipped so several versions fit', () => {
@@ -228,7 +228,7 @@ test('the hook entry script runs, prints nothing and exits 0 (today\'s cache: no
 });
 
 test('sanitize also removes variation selectors and blank filler letters', () => {
-  const hidden = 'a️' + String.fromCodePoint(0xE0100) + 'ㅤᅟb';
+  const hidden = 'a\uFE0F' + String.fromCodePoint(0xE0100) + '\u3164\u115Fb';
   assert.equal(mod.sanitize(hidden), 'ab');
 });
 

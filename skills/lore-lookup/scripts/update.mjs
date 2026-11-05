@@ -60,7 +60,7 @@ export function sanitize(text) {
     .replace(/\p{Cc}/gu, (c) => (c === '\n' || c === '\t' ? c : ''))
     .replace(/\p{Cf}/gu, '')
     // Variation selectors and blank "filler" letters can also hide text.
-    .replace(/[︀-️\u{E0100}-\u{E01EF}ᅟᅠㅤﾠ]/gu, '')
+    .replace(/[\uFE00-\uFE0F\u{E0100}-\u{E01EF}\u115F\u1160\u3164\uFFA0]/gu, '')
     .replace(/[<＜﹤〈〈⟨]/g, '‹')
     .replace(/[>＞﹥〉〉⟩]/g, '›');
 }

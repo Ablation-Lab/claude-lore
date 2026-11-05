@@ -209,7 +209,7 @@ export function loadSettings(file = paths().settings) {
   if (text === null || text.trim() === '') return { text, data: {} };
   let data;
   try {
-    data = JSON.parse(text.replace(/^﻿/, ''));
+    data = JSON.parse(text.replace(/^\uFEFF/, ''));
   } catch {
     throw new Error(`${file} isn't valid JSON, so Claude Lore left it alone. Fix it (or turn the hook on or off by hand) and try again.`);
   }
