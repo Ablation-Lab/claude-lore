@@ -280,15 +280,15 @@ export function buildSummary(results, now = new Date()) {
 
 // ---------- the once-a-day run ----------
 
-// The lock file holds a token unique to this run, so a run only ever removes
+// The lock file holds an ID unique to this run, so a run only ever removes
 // its own lock.
-const LOCK_TOKEN = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const lockId = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 function takeLock(lockPath, now) {
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      fs.writeFileSync(lockPath, LOCK_TOKEN, { flag: 'wx' });
+      fs.writeFileSync(lockPath, lockId, { flag: 'wx' });
       return true;
     } catch (err) {
       if (err.code !== 'EEXIST') return false;
@@ -297,7 +297,7 @@ function takeLock(lockPath, now) {
       if (age < LOCK_STALE_MS) return false; // another session is fetching right now
       // Take over a stale lock by renaming it away. Only one run's rename can
       // succeed; the others get an error and leave it to that run.
-      const aside = `${lockPath}.${LOCK_TOKEN}.stale`;
+      const aside = `${lockPath}.${lockId}.stale`;
       try { fs.renameSync(lockPath, aside); } catch { return false; }
       try { fs.unlinkSync(aside); } catch { /* swept later */ }
     }
@@ -307,7 +307,7 @@ function takeLock(lockPath, now) {
 
 function releaseLock(lockPath) {
   try {
-    if (fs.readFileSync(lockPath, 'utf8') === LOCK_TOKEN) fs.unlinkSync(lockPath);
+    if (fs.readFileSync(lockPath, 'utf8') === lockId) fs.unlinkSync(lockPath);
   } catch { /* already gone */ }
 }
 

@@ -81,6 +81,11 @@ Clone the repo somewhere outside your `~/.claude` folder (the installer refuses 
 
 ```sh
 git clone https://github.com/Ablation-Lab/claude-lore.git
+```
+
+Then, from the clone, run the installer (you can read `install.mjs` first):
+
+```sh
 cd claude-lore
 node install.mjs
 ```
@@ -219,7 +224,7 @@ To undo it by hand instead: delete those two folders, and remove the SessionStar
 
 ```
 install.mjs                     installer, hook on/off, uninstall
-.claude-plugin/                 plugin.json, marketplace.json and icon.png, for the Claude Code plugin
+.claude-plugin/                 plugin.json, marketplace.json and the listing icon, for the Claude Code plugin
 skills/lore-lookup/
   SKILL.md                      the instructions Claude follows
   sources.md                    the official sources and how to search each one
@@ -228,6 +233,8 @@ skills/lore-lookup/
   scripts/lore.mjs              status | summary | offer-made | hook-on | hook-off
   scripts/common.mjs            shared code: paths, files, settings.json edits
 test/                           automated tests (node --test)
+scripts/privacy-check.sh        maintainer pre-commit privacy check, run by .githooks/pre-commit;
+.githooks/                        not part of the skill, and never run by the plugin
 ```
 
 Everything is plain JavaScript run by Node, with no packages to install. Run the tests with `node --test`.
