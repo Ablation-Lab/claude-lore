@@ -28,9 +28,9 @@ In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs i
 - **Not part of the plugin.** It's available only when the skill is installed manually in Claude Code (with the installer, or by copying its folder to `~/.claude/skills/lore-lookup`). It's added only by `node install.mjs --hook`, by saying yes when the installer asks, by running the helper's `hook-on`, or by saying yes when the skill offers it (it offers only once, and only when the skill is installed manually). In plugin and claude.ai installs, `hook-on` refuses and changes nothing. It's one SessionStart entry in `~/.claude/settings.json`, shown in [Turn the daily hook on or off](#turn-the-daily-hook-on-or-off).
 - **What triggers it:** Claude Code starting a new session (SessionStart with the `startup` matcher; not resuming, `/clear` or compacting). Claude Code then runs `node ~/.claude/skills/lore-lookup/hook/daily-update.mjs` in the background. The script does nothing more if it already fetched today (by your local date), if a fetch failed in the last hour, or if another session is fetching right now.
 - **What it fetches:** an HTTPS GET of these three pages, and nothing else:
-  - `https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md`, the Claude Code changelog in Anthropic's GitHub repo (only the first 60 KB)
-  - `https://support.claude.com/en/articles/12138966-release-notes`, the Claude apps release notes (it reads at most 800 KB)
-  - `https://platform.claude.com/docs/en/release-notes/overview.md`, the Claude Platform release notes (only the first 60 KB)
+  - [raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md](https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md): the Claude Code changelog in Anthropic's GitHub repo (only the first 60 KB)
+  - [support.claude.com/en/articles/12138966-release-notes](https://support.claude.com/en/articles/12138966-release-notes): the Claude apps release notes (it reads at most 800 KB)
+  - [platform.claude.com/docs/en/release-notes/overview.md](https://platform.claude.com/docs/en/release-notes/overview.md): the Claude Platform release notes (only the first 60 KB)
 
   It follows at most three redirects, and only to those three hosts.
 - **What it sends:** only those requests, with the user agent `claude-lore (+https://github.com/Ablation-Lab/claude-lore)` and, for the two Markdown pages, a `Range` header. It sends no cookies, keys, settings, files or anything from your sessions.
