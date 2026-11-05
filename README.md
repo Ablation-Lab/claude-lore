@@ -13,6 +13,8 @@ Claude doesn't reliably know how its own apps work. Settings, plans and features
 3. answers from those pages and links to each one, and says plainly when something can't be confirmed;
 4. if the daily hook isn't on, mentions it **once** and offers to turn it on. It never asks again, whatever you answer.
 
+<img width="1569" height="529" alt="ClaudeLore" src="https://github.com/user-attachments/assets/8c126778-ab5a-44dc-b364-a95cb1a9923c" />
+
 The skill pre-approves only reading Anthropic's own sites (`code.claude.com`, `support.claude.com`, `platform.claude.com`, `docs.claude.com`, `claude.com` and `www.anthropic.com`), web search, and its `status`, `summary` and `offer-made` helper commands. Turning the hook on isn't pre-approved, so Claude Code asks you first (unless your own permission settings already allow it). Questions about writing code against the Claude API are left to Anthropic's own `claude-api` skill.
 
 **The optional daily hook.** A SessionStart hook runs a small script when a new Claude Code session starts. At most once a day, it fetches the newest entries from three public pages:
