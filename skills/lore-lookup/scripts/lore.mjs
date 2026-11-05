@@ -15,6 +15,14 @@ import {
   hasOurHook, withOurHook, withoutOurHook, offerMadeAt, markOfferMade,
 } from './common.mjs';
 
+// The hook runs the copy of the hook script that install.mjs puts in ~/.claude/skills/lore-lookup.
+// When the skill comes from the plugin, claude.ai or a copy made without the installer, that copy
+// isn't there, so a hook would have nothing to run: status says so (and the skill doesn't offer it),
+// and hook-on refuses instead of adding a hook that fails at every session start.
+function installedCopyMissing() {
+  return !fs.existsSync(paths().hookScript);
+}
+
 function cacheIsToday() {
   const p = paths();
   return readJson(p.state, {}).cacheDate === localDate() && fs.existsSync(p.summary);
@@ -22,7 +30,8 @@ function cacheIsToday() {
 
 export function hookState() {
   try {
-    return hasOurHook(loadSettings().data) ? 'installed' : 'not installed';
+    if (hasOurHook(loadSettings().data)) return 'installed';
+    return installedCopyMissing() ? 'not available (it needs the installer: node install.mjs --hook)' : 'not installed';
   } catch {
     return 'unknown (settings.json could not be read)';
   }
@@ -54,6 +63,15 @@ export function summary() {
 }
 
 export function hookOn() {
+  if (installedCopyMissing()) {
+    let on = false;
+    try { on = hasOurHook(loadSettings().data); } catch { /* reported by editSettings below */ }
+    if (!on) {
+      throw new Error(`the daily hook needs the copy that install.mjs puts in ${paths().skillDir}, and it isn't there ` +
+        '(this skill may come from the plugin or claude.ai). Nothing was changed. ' +
+        'To use the hook, run node install.mjs --hook from a clone of the repo.');
+    }
+  }
   const { changed, backup } = editSettings((s) => withOurHook(s));
   markOfferMade();
   return changed

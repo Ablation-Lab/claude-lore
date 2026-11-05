@@ -1,0 +1,13 @@
+{
+  "name": "lore-lookup",
+  "description": "Lore Lookup from Ablation Lab: answers about Claude, Claude Code and the Claude apps from Anthropic's official sources.",
+  "owner": { "name": "Ablation Lab" },
+  "plugins": [
+    {
+      "name": "lore-lookup",
+      "source": "./",
+      "description": "Answers questions about Claude, Claude Code and the Claude apps from Anthropic's official sources, with citations. Installs no hooks; an optional daily SessionStart hook is available separately through the repo's installer.",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -25,11 +25,30 @@ const backups = () => fs.readdirSync(tmp).filter((f) => f.includes('claude-lore-
 const install = (...args) => spawnSync(process.execPath, [path.join(repo, 'install.mjs'), ...args],
   { env: { ...process.env, CLAUDE_CONFIG_DIR: tmp }, encoding: 'utf8' });
 
+// The hook-on/off and status tests act as if the installer has run: the hook script it installs is there.
+const fakeInstalledCopy = () => {
+  fs.mkdirSync(path.join(skillDir, 'hook'), { recursive: true });
+  fs.writeFileSync(path.join(skillDir, 'hook', 'daily-update.mjs'), '// sample placeholder\n');
+};
+
 beforeEach(() => {
   for (const f of fs.readdirSync(tmp)) fs.rmSync(path.join(tmp, f), { recursive: true, force: true });
 });
 
+test('without the installed copy (plugin or claude.ai), status says the hook is not available and hook-on changes nothing', () => {
+  fs.rmSync(skillDir, { recursive: true, force: true });
+  fs.writeFileSync(settingsFile, JSON.stringify(ORIGINAL, null, 2));
+  const before = fs.readFileSync(settingsFile, 'utf8');
+  assert.match(lore.status(), /daily hook: not available \(it needs the installer/);
+  assert.doesNotMatch(lore.status(), /daily hook: not installed/); // so the skill never offers it
+  assert.throws(() => lore.hookOn(), /needs the copy that install\.mjs puts in/);
+  assert.equal(fs.readFileSync(settingsFile, 'utf8'), before);
+  assert.deepEqual(backups(), []);
+  assert.match(lore.hookOff(), /was not on/);
+});
+
 test('hook-on adds one async startup hook in exec form and keeps everything else', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, JSON.stringify(ORIGINAL, null, 2));
   lore.hookOn();
   const s = read();
@@ -46,6 +65,7 @@ test('hook-on adds one async startup hook in exec form and keeps everything else
 });
 
 test('hook-on when already on changes nothing, even if ours is not last', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, JSON.stringify(ORIGINAL, null, 2));
   lore.hookOn();
   const s = read();
@@ -57,6 +77,7 @@ test('hook-on when already on changes nothing, even if ours is not last', () => 
 });
 
 test('an old shell-form entry is updated in place', () => {
+  fakeInstalledCopy();
   const old = { matcher: 'startup', hooks: [{ type: 'command', command: "node '/x/.claude/skills/claude-lore/hook/daily-update.mjs'" }] };
   fs.writeFileSync(settingsFile, JSON.stringify({ hooks: { SessionStart: [old, OTHER_HOOK] } }));
   lore.hookOn();
@@ -67,6 +88,7 @@ test('an old shell-form entry is updated in place', () => {
 });
 
 test('hook-off removes only ours and restores the original content', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, JSON.stringify(ORIGINAL, null, 2));
   lore.hookOn();
   lore.hookOff();
@@ -75,6 +97,7 @@ test('hook-off removes only ours and restores the original content', () => {
 });
 
 test('hook-off with no hook of ours leaves the file byte for byte, with no backup', () => {
+  fakeInstalledCopy();
   const text = '{\n    "hooks": {\n        "Stop": []\n    }\n}\n';
   fs.writeFileSync(settingsFile, text);
   assert.match(lore.hookOff(), /was not on/);
@@ -83,6 +106,7 @@ test('hook-off with no hook of ours leaves the file byte for byte, with no backu
 });
 
 test('hook-on keeps the file\'s indentation and leaves empty sections it didn\'t touch', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, '{\n    "hooks": {\n        "Stop": []\n    }\n}\n');
   lore.hookOn();
   const text = fs.readFileSync(settingsFile, 'utf8');
@@ -92,18 +116,21 @@ test('hook-on keeps the file\'s indentation and leaves empty sections it didn\'t
 });
 
 test('a missing settings.json is created, with no backup', () => {
+  fakeInstalledCopy();
   lore.hookOn();
   assert.ok(common.hasOurHook(read()));
   assert.equal(backups().length, 0);
 });
 
 test('only the newest three backups are kept', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, '{}');
   for (let i = 0; i < 5; i++) { lore.hookOn(); lore.hookOff(); }
   assert.equal(backups().length, 3);
 });
 
 test('invalid JSON: refuses, leaves the file untouched and never quotes it', () => {
+  fakeInstalledCopy();
   const text = '{ "env": { "API_KEY": sample-secret-value } }';
   fs.writeFileSync(settingsFile, text);
   assert.throws(() => lore.hookOn(), (err) => /isn't valid JSON/.test(err.message) && !/sample-secret/.test(err.message));
@@ -112,11 +139,13 @@ test('invalid JSON: refuses, leaves the file untouched and never quotes it', () 
 });
 
 test('a "hooks" value that is not an object: refuses', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, '{"hooks": []}');
   assert.throws(() => lore.hookOn(), /isn't an object/);
 });
 
 test('Windows line endings and a byte-order mark are handled', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, '\uFEFF{\r\n  "model": "sample-model"\r\n}\r\n');
   lore.hookOn();
   const text = fs.readFileSync(settingsFile, 'utf8');
@@ -125,12 +154,14 @@ test('Windows line endings and a byte-order mark are handled', () => {
 });
 
 test('recognises our entries by path only, not a user command that mentions it', () => {
+  fakeInstalledCopy();
   assert.ok(common.isOurs({ command: 'node', args: ['C:\\x\\claude-lore\\hook\\daily-update.mjs'] }));
   assert.ok(common.isOurs({ command: 'node "C:\\x\\claude-lore\\hook\\daily-update.mjs"' }));
   assert.ok(!common.isOurs({ command: 'bash -c "node ~/x/claude-lore/hook/daily-update.mjs && my-thing"' }));
 });
 
 test('settings.json behind a symlink: the target is updated and the link kept', (t) => {
+  fakeInstalledCopy();
   const real = path.join(tmp, 'dotfiles-settings.json');
   fs.writeFileSync(real, JSON.stringify({ model: 'sample-model' }));
   try { fs.symlinkSync(real, settingsFile, 'file'); } catch { t.skip('this system does not allow file symlinks'); return; }
@@ -140,6 +171,7 @@ test('settings.json behind a symlink: the target is updated and the link kept', 
 });
 
 test('status and summary never print settings', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, JSON.stringify({ env: { SAMPLE_SECRET: 'do-not-print' } }));
   let out = lore.status();
   assert.match(out, /cache: none/);
@@ -155,6 +187,7 @@ test('status and summary never print settings', () => {
 });
 
 test('status with unreadable settings says unknown instead of failing', () => {
+  fakeInstalledCopy();
   fs.writeFileSync(settingsFile, 'not json');
   assert.match(lore.status(), /daily hook: unknown/);
 });
