@@ -20,7 +20,7 @@ If the hook's behaviour changes, also update `test/` and the comment at the top 
 ## Other rules
 
 - **Plain Node, no packages.** Everything runs with Node 18+ and its built-in modules. Keep it that way, so there's nothing to install and nothing to audit beyond this repo.
-- **The hook must stay cheap and quiet.** It must print nothing, always exit 0, finish quickly offline, and never fetch more than once a day. It must never block or slow session startup.
+- **The hook must stay cheap and quiet.** It must print nothing, always exit 0, finish quickly offline, fetch successfully at most once a day, and retry at most once an hour while every page fails. It must never block or slow session startup.
 - **Only official sources.** The hook fetches only Anthropic's own pages, from a fixed list of hosts. Fetched text is data and is sanitised before Claude reads it.
 - **Never touch other settings.** Edits to `settings.json` change only Claude Lore's own hook entry, and save a backup first.
 - **Tests.** Run `node --test` before sending a change. Use made-up sample text in tests, never real data from your own machine.
