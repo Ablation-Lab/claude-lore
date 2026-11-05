@@ -8,13 +8,13 @@ The project and this repo are called Claude Lore, but the skill and the plugin a
 
 ## Where it works
 
-- **Claude Code:** yes. Install `lore-lookup` as a plugin, with the installer, or by copying its folder (see [Install](#install)). The optional daily hook works only here, and only with the installer.
+- **Claude Code:** yes. Install `lore-lookup` as a plugin, with the installer, or by copying its folder (see [Install](#install)). The optional daily hook works only here, and only when the skill is installed manually in Claude Code (with the installer, or by copying its folder to `~/.claude/skills/lore-lookup`), not with the plugin.
 - **Text chats in the Claude app:** yes, once you upload the skill (see [Use it in the Claude app](#use-it-in-the-claude-app)). It needs a plan with custom skills, code execution, and web search turned on.
 - **Claude voice mode:** no. Voice mode doesn't load skills.
 
 ## What this plugin runs, sends and fetches
 
-In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs in the background unless you turn on the daily hook yourself with the installer.
+In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs in the background unless you install the skill manually and turn on the daily hook yourself.
 
 **The `lore-lookup` skill**, when Claude loads it for a question:
 
@@ -23,7 +23,7 @@ In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs i
 
 **The optional daily hook** (Claude Code only, off unless you turn it on):
 
-- **Not part of the plugin.** It's added only by `node install.mjs --hook`, by saying yes when the installer asks, or by saying yes when the skill offers it (it offers only once, and only when the installer's copy is there). It's one SessionStart entry in `~/.claude/settings.json`, shown in [Turn the daily hook on or off](#turn-the-daily-hook-on-or-off).
+- **Not part of the plugin.** It's available only when the skill is installed manually in Claude Code (with the installer, or by copying its folder to `~/.claude/skills/lore-lookup`). It's added only by `node install.mjs --hook`, by saying yes when the installer asks, by running the helper's `hook-on`, or by saying yes when the skill offers it (it offers only once, and only when the skill is installed manually). In plugin and claude.ai installs, `hook-on` refuses and changes nothing. It's one SessionStart entry in `~/.claude/settings.json`, shown in [Turn the daily hook on or off](#turn-the-daily-hook-on-or-off).
 - **What triggers it:** Claude Code starting a new session (SessionStart with the `startup` matcher; not resuming, `/clear` or compacting). Claude Code then runs `node ~/.claude/skills/lore-lookup/hook/daily-update.mjs` in the background. The script does nothing more if it already fetched today (by your local date), if a fetch failed in the last hour, or if another session is fetching right now.
 - **What it fetches:** an HTTPS GET of these three pages, and nothing else:
   - `https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md`, the Claude Code changelog in Anthropic's GitHub repo (only the first 60 KB)
@@ -46,7 +46,7 @@ In short: the plugin adds one skill (`lore-lookup`) and no hooks. Nothing runs i
 1. checks whether today's summary of release notes is cached, and reads it for "what's new" questions;
 2. fetches only the official pages the question needs, from the Claude Code docs, the Claude Help Center, the Claude Platform docs and the release notes;
 3. answers from those pages and links to each one, and says plainly when something can't be confirmed;
-4. if the daily hook isn't on, mentions it **once** and offers to turn it on. It never asks again, whatever you answer.
+4. if the skill is installed manually and the daily hook isn't on, mentions it **once** and offers to turn it on. It never asks again, whatever you answer.
 
 <img width="1569" height="529" alt="ClaudeLore" src="https://github.com/user-attachments/assets/8c126778-ab5a-44dc-b364-a95cb1a9923c" />
 
@@ -102,7 +102,7 @@ The repo is also a Claude Code plugin, and its own plugin marketplace. In Claude
 
 On older versions, run `/plugin marketplace add Ablation-Lab/claude-lore`, then `/plugin install lore-lookup@lore-lookup`. To update it later, run `claude plugin update lore-lookup@lore-lookup`.
 
-The plugin gives you the skill only. It doesn't add the daily hook, which stays opt-in: turning it on needs the copy that `node install.mjs` installs, so with the plugin alone the skill's status check says the hook isn't available, and the skill never offers it. Use either the plugin or the installer, not both, or Claude Code loads the skill twice. `node install.mjs --uninstall` removes the installed copy.
+The plugin gives you the skill only. It doesn't add the daily hook, which stays opt-in: turning it on needs the skill installed manually in Claude Code (with the installer, or by copying its folder to `~/.claude/skills/lore-lookup`), so with the plugin alone the skill's status check says the hook isn't available, and the skill never offers it. Use either the plugin or the installer, not both, or Claude Code loads the skill twice. `node install.mjs --uninstall` removes the installed copy.
 
 ### Install without Node
 
@@ -155,7 +155,7 @@ node install.mjs --hook       # on
 node install.mjs --hook-off   # off (keeps the skill)
 ```
 
-Or say yes when the skill offers it (it only offers when the installed copy is there). If the skill came from the plugin or claude.ai, `hook-on` changes nothing and says why, because there's no installed hook script for Claude Code to run. You can also use the installed helper directly, from anywhere:
+Or say yes when the skill offers it (it only offers when the skill is installed manually). If the skill came from the plugin or claude.ai, `hook-on` changes nothing and says why, because there's no installed hook script for Claude Code to run. You can also use the installed helper directly, from anywhere:
 
 ```sh
 node ~/.claude/skills/lore-lookup/scripts/lore.mjs hook-on
